@@ -82,7 +82,8 @@ void Manchester::setupTransmit(uint8_t pin, uint8_t SF)
     uint16_t compensationFactor = 4; 
   #endif  
 
-  delay1 = (HALF_BIT_INTERVAL >> speedFactor) - compensationFactor;
+  if ((HALF_BIT_INTERVAL >> speedFactor) <= compensationFactor) delay1 = 0; //oops, we are too slow for such speeds
+  else delay1 = (HALF_BIT_INTERVAL >> speedFactor) - compensationFactor;
   delay2 = (HALF_BIT_INTERVAL >> speedFactor) - 2;
   
   #if F_CPU == 1000000UL
@@ -353,8 +354,7 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     TIMSK = _BV(OCIE1A); // Turn on interrupt
     TCNT1 = 0; // Set counter to 0
 
-  #else // ATmega328 is a default microcontroller
-
+  #elif defined(__AVR_ATmega328P__)
 
     /*
     Timer 2 is used with a ATMega328.
@@ -373,11 +373,51 @@ void MANRX_SetupReceive(uint8_t speedFactor)
     #elif F_CPU == 16000000UL
       TCCR2B = _BV(CS22); // 1/64 prescaler
       OCR2A = (128 >> speedFactor) - 1; 
+    #elif F_CPU == 20000000UL
+      TCCR2B = _BV(CS22); // 1/64 prescaler
+      OCR2A = (160 >> speedFactor) - 1; 
     #else
-    #error "Manchester library only supports 8mhz, 16mhz on ATMega328"
+			#error "Manchester library only supports 1Mhz, 8Mhz, 16Mhz, 20Mhz on ATMega328"
     #endif
     TIMSK2 = _BV(OCIE2A); // Turn on interrupt
     TCNT2 = 0; // Set counter to 0
+
+  #elif defined(__AVR_ATmega1284P__)
+
+    /*
+    Timer 3 is used on ATMega1284, Timer3 controlls PWM on SPI pins
+    http://www.atmel.com/images/doc8059.pdf page 134
+    How to find the correct value: (OCRxA +1) = F_CPU / prescaler / 1953.125
+    OCR3A is 16 bit register
+    */
+
+    TCCR3A = _BV(WGM32); // reset counter on match
+    #if F_CPU == 1000000UL
+      TCCR3B = _BV(CS30); // 1/1 prescaler
+      OCR3A = (512 >> speedFactor) - 1;
+    #elif F_CPU == 8000000UL
+      TCCR3B = _BV(CS31); // 1/8 prescaler
+      OCR3A = (512 >> speedFactor) - 1; 
+    #elif F_CPU == 12000000UL
+      TCCR3B = _BV(CS31); // 1/8 prescaler
+      OCR3A = (768 >> speedFactor) - 1; 
+    #elif F_CPU == 16000000UL
+      TCCR3B = _BV(CS31); // 1/8 prescaler
+      OCR3A = (1024 >> speedFactor) - 1; 
+    #elif F_CPU == 20000000UL
+      TCCR3B = _BV(CS31); // 1/8 prescaler
+      OCR3A = (1280 >> speedFactor) - 1; 
+    #elif F_CPU == 24000000UL
+      TCCR3B = _BV(CS31); // 1/8 prescaler
+      OCR3A = (1536 >> speedFactor) - 1; 
+    #else
+			#error "Manchester library only supports 1Mhz, 8Mhz, 12Mhz, 16Mhz, 20Mhz, 24Mhz on ATMega1284"
+    #endif
+    TIMSK3 = _BV(OCIE3A); // Turn on interrupt
+    TCNT3 = 0; // Set counter to 0
+
+  #else 
+		#error "Manchester library doesnt support your microcontroller"
   #endif
 
 } //end of setupReceive
@@ -443,14 +483,17 @@ void AddManBit(uint16_t *manBits, uint8_t *numMB,
     *numMB = 0;
   }
 }
+
 #if defined( __AVR_ATtinyX5__ )
-ISR(TIMER1_COMPA_vect)
+	ISR(TIMER1_COMPA_vect)
 #elif defined( __AVR_ATtinyX4__ )
-ISR(TIM1_COMPA_vect)
-#elif defined(__AVR_ATmega32U4__)
-ISR(TIMER3_COMPA_vect)
+	ISR(TIM1_COMPA_vect)
+#elif defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega1284P__)
+	ISR(TIMER3_COMPA_vect)
+#elif defined(__AVR_ATmega328P__)
+	ISR(TIMER2_COMPA_vect)
 #else
-ISR(TIMER2_COMPA_vect)
+	#error "Manchester library doesnt support your microcontroller"
 #endif
 {
   if (rx_mode < RX_MODE_MSG) //receiving something

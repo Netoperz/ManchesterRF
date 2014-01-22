@@ -3,6 +3,7 @@ This is a [Manchester encoding](http://en.wikipedia.org/wiki/Manchester_code) RF
 Library supports:
 
 various microcontrollers 
+* ATmega1284
 * ATmega328
 * ATmega8
 * ATMega32U4
@@ -14,6 +15,7 @@ various microcontroller's speed both RX and TX
 * 8Mhz
 * 16Mhz
 * 16.5Mhz ATtiny85
+* 20Mhz
 
 various transmission speeds
 * 300baud
