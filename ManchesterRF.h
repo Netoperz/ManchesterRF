@@ -30,8 +30,8 @@ This is required by the ASK RF link system to ensure its correct operation.
 The data rate is then 600 bits/s. Higher and lower rates are also supported.
 */
 
-#ifndef MANCHESTER_h
-#define MANCHESTER_h
+#ifndef MANCHESTERRF_h
+#define MANCHESTERRF_h
 
 //timer scaling factors for different transmission speeds
 #define MAN_300 0
@@ -72,8 +72,9 @@ allowing us to transmit even with up to 100% in clock speed difference
 
 */
 
+
 //setup timing for receiver
-#define MinCount 33 //pulse lower count limit on capture
+#define MinCount 31 //33 //pulse lower count limit on capture
 #define MaxCount 65 //pulse higher count limit on capture
 #define MinLongCount 66 //pulse lower count on double pulse
 #define MaxLongCount 129 //pulse higher count on double pulse
@@ -101,50 +102,91 @@ allowing us to transmit even with up to 100% in clock speed difference
   #include <pins_arduino.h>
 #endif
 
-class Manchester
-{
+class ManchesterRF : public Stream {
   public:
-    Manchester(); //the constructor
-    void setTxPin(uint8_t pin); //set the arduino digital pin for transmit. 
-    void setRxPin(uint8_t pin); //set the arduino digital pin for receive.
+    ManchesterRF(uint8_t SF = MAN_4800); //the constructor
     
-    void workAround1MhzTinyCore(uint8_t a = 1); //apply workaround for defect in tiny Core library for 1Mhz
-    void setupTransmit(uint8_t pin, uint8_t SF = MAN_1200); //set up transmission
-    void setupReceive(uint8_t pin, uint8_t SF = MAN_1200); //set up receiver
-    void setup(uint8_t Tpin, uint8_t Rpin, uint8_t SF = MAN_1200); //set up receiver
+    void setBalance(int8_t bf);
+
+    void TXInit();
+    void TXInit(uint8_t pin); //set pin
+    void TXInit(uint8_t port, uint8_t mask); //set port and mask
+//    void TxInit(uint8_t pin, int8_t bf); //set pin and balance factor
+    //void TxInit(uint8_t port, uint8_t mask, int8_t bf); //set port and mask and balance factor
+
+    void RXInit();
+    void RXInit(uint8_t pin); //set pin
+    void RXInit(uint8_t port, uint8_t mask); //set port and mask
     
-    void transmit(uint16_t data); //transmit 16 bits of data
-    void transmitArray(uint8_t numBytes, uint8_t *data); // transmit array of bytes
+    void setDebugPortMask(uint8_t port, uint8_t mask);
     
-    uint8_t decodeMessage(uint16_t m, uint8_t &id, uint8_t &data); //decode 8 bit payload and 4 bit ID from the message, return 1 of checksum is correct, otherwise 0
-    uint16_t encodeMessage(uint8_t id, uint8_t data); //encode 8 bit payload, 4 bit ID and 4 bit checksum into 16 bit
+    //void setup(uint8_t Tpin, uint8_t Rpin); //set up receiver
     
+//    void transmit(uint16_t data); //transmit 16 bits of data
+    
+    //uint8_t decodeMessage(uint16_t m, uint8_t &id, uint8_t &data); //decode 8 bit payload and 4 bit ID from the message, return 1 of checksum is correct, otherwise 0
+    //uint16_t encodeMessage(uint8_t id, uint8_t data); //encode 8 bit payload, 4 bit ID and 4 bit checksum into 16 bit
+    
+//    uint8_t available();
+
+    uint8_t transmitArray(uint8_t size, uint8_t *data); // transmit array of bytes
+    uint8_t receiveArray(uint8_t &size, uint8_t *data); // receive array of bytes
+    
+    uint8_t transmitPacket(uint8_t size, uint8_t from, uint8_t to, uint8_t meta, uint8_t *payload); //decode receive buffer into a packet, return 1 if valid packet received, otherwise 0
+    uint8_t receivePacket(uint8_t &size, uint8_t &from, uint8_t &to, uint8_t &meta, uint8_t *payload); //decode receive buffer into a packet, return 1 if valid packet received, otherwise 0
+    
+    uint8_t transmitByte(uint8_t data);
+    uint8_t receiveByte(uint8_t &data);
+    
+    uint8_t transmitByte(uint8_t data0, uint8_t data1);
+    uint8_t receiveByte(uint8_t &data0, uint8_t &data1);
+
+    uint8_t transmitByte(uint8_t data0, uint8_t data1, uint8_t data2);
+    uint8_t receiveByte(uint8_t &data0, uint8_t &data1, uint8_t &data2);
+
+
+
+    uint8_t transmitWord(uint16_t data);
+    uint8_t receiveWord(uint16_t &data);
+
     //wrappers for global functions
     void beginReceive(void);
-    void beginReceiveArray(uint8_t maxBytes, uint8_t *data);
-    uint8_t receiveComplete(void);
-    uint16_t getMessage(void);
+//    void beginReceiveArray(uint8_t maxBytes, uint8_t *data);
+//    uint8_t receiveComplete(void);
+//    uint16_t getMessage(void);
     void stopReceive(void);
+  
     uint8_t speedFactor;
-    uint16_t delay1;
-    uint16_t delay2;
+    uint16_t delay10;
+    uint16_t delay20;
+    uint16_t delay11;
+    uint16_t delay21;
+    
+    virtual size_t write(uint8_t);
+    virtual int available(void);
+    virtual int peek(void);
+    virtual int read(void);
+    virtual void flush(void);    
+    using Print::write;
+
     
   private:
+    void pin2PortMask(uint8_t pin, uint8_t &port, uint8_t &mask);
     void sendZero(void);
     void sendOne(void);
     uint8_t TxPin;
-    uint8_t applyWorkAround1Mhz;
-};//end of class Manchester
+    uint8_t directTxMask;
+    uint8_t directTxPort;
+    int8_t balanceFactor;
+};//end of class ManchesterRF
 
 // Cant really do this as a real C++ class, since we need to have
 // an ISR
 extern "C"
 {
-    //set the arduino digital pin for receive. default 4.
-    extern void MANRX_SetRxPin(uint8_t pin);
-    
+  
     //begin the timer used to receive data
-    extern void MANRX_SetupReceive(uint8_t speedFactor = MAN_1200);
+    extern void MANRX_SetupReceive(uint8_t speedFactor = MAN_4800);
     
     // begin receiving 16 bits
     extern void MANRX_BeginReceive(void);
@@ -152,16 +194,11 @@ extern "C"
     // begin receiving a byte array
     extern void MANRX_BeginReceiveBytes(uint8_t maxBytes, uint8_t *data);
     
-    // true if a complete message is ready
-    extern uint8_t MANRX_ReceiveComplete(void);
-    
-    // fetch the received message
-    extern uint16_t MANRX_GetMessage(void);
-    
     // stop receiving data
     extern void MANRX_StopReceive(void);
+    
+    //extern void MAN_RX_INTERRUPT_HANDLER();
 }
 
-extern Manchester man;
 
 #endif

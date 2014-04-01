@@ -2,8 +2,8 @@
 
   Manchester Receiver example
   
-  In this example receiver will receive an array of 8 bit numbers per transmittion
-    
+  In this example receiver will receive two 8 bit numbers per transmittion
+
 */
 
 
@@ -16,8 +16,7 @@
 
 ManchesterRF rf(MAN_4800); //link speed, try also MAN_300, MAN_600, MAN_1200, MAN_2400, MAN_4800, MAN_9600, MAN_19200, MAN_38400
 
-uint8_t size;
-uint8_t *data;
+uint8_t a, b;
 
 void setup() {
   pinMode(LED_PIN, OUTPUT);  
@@ -28,11 +27,9 @@ void setup() {
 void loop() {
 
   if (rf.available()) { //something is in RX buffer
-    if (rf.receiveArray(size, data)) {
+    if (rf.receiveByte(a, b)) {
       //process the data
-      for (int i = 0; i < size; i++) {
-         data[i]; //do something with the data 
-      }
+      //...
       digitalWrite(LED_PIN, digitalRead(LED_PIN)); //blink the LED on receive
     }
   }  
