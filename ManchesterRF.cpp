@@ -990,12 +990,29 @@ packet format
 
 
 uint8_t ManchesterRF::transmitPacket(uint8_t size, uint8_t from, uint8_t to, uint8_t meta, uint8_t *payload) {
-  //uint8_t tx_buff[MAN_MESSAGE_SIZE];
+  ::man_tx_buff[0] = from;
+  ::man_tx_buff[1] = to;
+  ::man_tx_buff[2] = meta;
+//  ::man_tx_buff[3] = 111;
+//  ::man_tx_buff[4] = 222;
+  for (uint8_t i = 0; i < size && i < 10; i++) {
+    ::man_tx_buff[i + 3] = payload[i];
+  }
 
-  return 0;
+  //calculate the modification of a Fletcher checksum
+  uint8_t c0 = size + 4;
+  uint8_t c1 = size + 4;
+  for(int i = 0; i < size + 3; i++) { //zeroth element is the size, it's not part of the packet, but we will add it as an extra check; sizeth element is the checksum we are calculating
+    c0 += ::man_tx_buff[i];
+    c1 += c0;
+  }
+  c1 ^= c0;
+  ::man_tx_buff[size + 3] = c1;
+
+  return this->transmitArray(size + 4, ::man_tx_buff);
 }
 
-uint8_t ManchesterRF::receivePacket(uint8_t &size, uint8_t &from, uint8_t &to, uint8_t &meta, uint8_t *payload) {
+uint8_t ManchesterRF::receivePacket(uint8_t &size, uint8_t &from, uint8_t &to, uint8_t &meta, uint8_t **payload) {
   if (MAN_IS_BUFF_EMPTY) return 0;
   if (man_rx_buff[man_rx_buff_start][0] < 4) { //not enough bytes for a valid packet
     man_rx_buff_start = (man_rx_buff_start + 1) % MAN_BUF_SIZE; //remove message from the buffer
@@ -1006,7 +1023,7 @@ uint8_t ManchesterRF::receivePacket(uint8_t &size, uint8_t &from, uint8_t &to, u
   from = man_rx_buff[man_rx_buff_start][1];
   to   = man_rx_buff[man_rx_buff_start][2];
   meta = man_rx_buff[man_rx_buff_start][3];
-  payload = &man_rx_buff[man_rx_buff_start][4];
+  *payload = &man_rx_buff[man_rx_buff_start][4];
   uint8_t ch = man_rx_buff[man_rx_buff_start][msize];
 
   //calculate the modification of a Fletcher checksum
