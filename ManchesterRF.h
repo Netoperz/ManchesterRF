@@ -130,7 +130,7 @@ class ManchesterRF : public Stream {
 //    uint8_t available();
 
     uint8_t transmitArray(uint8_t size, uint8_t *data); // transmit array of bytes
-    uint8_t receiveArray(uint8_t &size, uint8_t *data); // receive array of bytes
+    uint8_t receiveArray(uint8_t &size, uint8_t **data); // receive array of bytes
     
     uint8_t transmitPacket(uint8_t size, uint8_t from, uint8_t to, uint8_t meta, uint8_t *payload); //decode receive buffer into a packet, return 1 if valid packet received, otherwise 0
     uint8_t receivePacket(uint8_t &size, uint8_t &from, uint8_t &to, uint8_t &meta, uint8_t **payload); //decode receive buffer into a packet, return 1 if valid packet received, otherwise 0
