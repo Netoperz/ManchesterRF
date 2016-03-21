@@ -28,7 +28,7 @@ void setup() {
 void loop() {
 
   if (rf.available()) { //something is in RX buffer
-    if (rf.receiveArray(size, data)) {
+    if (rf.receiveArray(size, &data)) {
       //process the data
       for (int i = 0; i < size; i++) {
          data[i]; //do something with the data 

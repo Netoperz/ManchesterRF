@@ -929,10 +929,10 @@ uint8_t ManchesterRF::transmitArray(uint8_t size, uint8_t *data) {
 }//end of send the data
 
 
-uint8_t ManchesterRF::receiveArray(uint8_t &size, uint8_t *data) {
+uint8_t ManchesterRF::receiveArray(uint8_t &size, uint8_t **data) {
   if (MAN_IS_BUFF_EMPTY) return 0;
   size = man_rx_buff[man_rx_buff_start][0];
-  data = &man_rx_buff[man_rx_buff_start][1];
+  *data = &man_rx_buff[man_rx_buff_start][1];
   man_rx_buff_start = (man_rx_buff_start + 1) % MAN_BUF_SIZE; //remove message from the buffer
   return 1;
 }
